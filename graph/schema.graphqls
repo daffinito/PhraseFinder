@@ -1,0 +1,8 @@
+type Query {
+  findPhrases(in: String!): [Phrase!]!
+}
+
+type Phrase {
+  text: String!
+  count: Int!
+}
