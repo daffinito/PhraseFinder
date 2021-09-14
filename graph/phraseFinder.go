@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/daffinito/3wpapi/graph/model"
+	"github.com/daffinito/PhraseFinder/graph/model"
 )
 
 func PhraseFinder(text string) []*model.Phrase {
@@ -43,7 +43,7 @@ func getPhrases(text string, limit int) map[string]int {
 	numWords := len(words)
 	for n := range words {
 		if n >= limit {
-			break;
+			break
 		}
 		if numWords > n+2 {
 			phrase.WriteString(words[n])
@@ -52,7 +52,7 @@ func getPhrases(text string, limit int) map[string]int {
 			phrase.WriteString(" ")
 			phrase.WriteString(words[n+2])
 			phraseString := phrase.String()
-			
+
 			if _, ok := phrases[phraseString]; !ok {
 				phrases[phraseString] = 1
 			} else {

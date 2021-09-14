@@ -1,4 +1,4 @@
-module github.com/daffinito/3wpapi
+module github.com/daffinito/PhraseFinder
 
 go 1.17
 

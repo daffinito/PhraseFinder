@@ -6,8 +6,8 @@ package graph
 import (
 	"context"
 
-	"github.com/daffinito/3wpapi/graph/generated"
-	"github.com/daffinito/3wpapi/graph/model"
+	"github.com/daffinito/PhraseFinder/graph/generated"
+	"github.com/daffinito/PhraseFinder/graph/model"
 )
 
 func (r *queryResolver) FindPhrases(ctx context.Context, in string) ([]*model.Phrase, error) {

@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/daffinito/3wpapi/graph/generated"
-	"github.com/daffinito/3wpapi/graph/model"
+	"github.com/daffinito/PhraseFinder/graph/generated"
+	"github.com/daffinito/PhraseFinder/graph/model"
 )
 
 func Test_queryResolver_FindPhrases(t *testing.T) {
@@ -75,7 +75,7 @@ func TestResolver_Query(t *testing.T) {
 	}{
 		{
 			name: `Query returns valid response`,
-			r: &Resolver{},
+			r:    &Resolver{},
 			want: &queryResolver{&Resolver{}},
 		},
 	}

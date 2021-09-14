@@ -12,7 +12,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
-	"github.com/daffinito/3wpapi/graph/model"
+	"github.com/daffinito/PhraseFinder/graph/model"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -339,7 +339,7 @@ func (ec *executionContext) _Query_findPhrases(ctx context.Context, field graphq
 	}
 	res := resTmp.([]*model.Phrase)
 	fc.Result = res
-	return ec.marshalNPhrase2ᚕᚖgithubᚗcomᚋdaffinitoᚋ3wpapiᚋgraphᚋmodelᚐPhraseᚄ(ctx, field.Selections, res)
+	return ec.marshalNPhrase2ᚕᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhraseᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1899,7 +1899,7 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) marshalNPhrase2ᚕᚖgithubᚗcomᚋdaffinitoᚋ3wpapiᚋgraphᚋmodelᚐPhraseᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Phrase) graphql.Marshaler {
+func (ec *executionContext) marshalNPhrase2ᚕᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhraseᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Phrase) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -1923,7 +1923,7 @@ func (ec *executionContext) marshalNPhrase2ᚕᚖgithubᚗcomᚋdaffinitoᚋ3wpa
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNPhrase2ᚖgithubᚗcomᚋdaffinitoᚋ3wpapiᚋgraphᚋmodelᚐPhrase(ctx, sel, v[i])
+			ret[i] = ec.marshalNPhrase2ᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhrase(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -1943,7 +1943,7 @@ func (ec *executionContext) marshalNPhrase2ᚕᚖgithubᚗcomᚋdaffinitoᚋ3wpa
 	return ret
 }
 
-func (ec *executionContext) marshalNPhrase2ᚖgithubᚗcomᚋdaffinitoᚋ3wpapiᚋgraphᚋmodelᚐPhrase(ctx context.Context, sel ast.SelectionSet, v *model.Phrase) graphql.Marshaler {
+func (ec *executionContext) marshalNPhrase2ᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhrase(ctx context.Context, sel ast.SelectionSet, v *model.Phrase) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")

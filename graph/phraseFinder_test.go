@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/daffinito/3wpapi/graph/model"
+	"github.com/daffinito/PhraseFinder/graph/model"
 )
 
 func Test_sanitizeText(t *testing.T) {
