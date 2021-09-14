@@ -10,9 +10,9 @@ import (
 
 func PhraseFinder(text string) []*model.Phrase {
 	newText := sanitizeText(text)
-	phraseMap := getPhrases(newText, 100)
+	phraseMap := getPhrases(newText)
 	phrases := buildResponse(phraseMap)
-	phrases = sortResponse(phrases)
+	phrases = sortResponse(phrases, 100)
 
 	return phrases
 }
@@ -36,15 +36,12 @@ func sanitizeText(text string) string {
 	return strings.ToLower(strings.TrimSpace(newText))
 }
 
-func getPhrases(text string, limit int) map[string]int {
+func getPhrases(text string) map[string]int {
 	phrases := make(map[string]int)
 	var phrase strings.Builder
 	words := strings.Split(text, " ")
 	numWords := len(words)
 	for n := range words {
-		if n >= limit {
-			break
-		}
 		if numWords > n+2 {
 			phrase.WriteString(words[n])
 			phrase.WriteString(" ")
@@ -77,9 +74,12 @@ func buildResponse(phrases map[string]int) []*model.Phrase {
 	return response
 }
 
-func sortResponse(phrases []*model.Phrase) []*model.Phrase {
+func sortResponse(phrases []*model.Phrase, limit int) []*model.Phrase {
 	sort.SliceStable(phrases, func(i, j int) bool {
 		return phrases[i].Count > phrases[j].Count
 	})
-	return phrases
+	if len(phrases) <= limit {
+		return phrases
+	}
+	return phrases[0:limit]
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/daffinito/PhraseFinder/graph/model"
 )
 
-func Test_queryResolver_FindPhrases(t *testing.T) {
+func Test_queryResolver_FindPhrasesFromText(t *testing.T) {
 	type fields struct {
 		Resolver *Resolver
 	}
@@ -53,15 +53,15 @@ func Test_queryResolver_FindPhrases(t *testing.T) {
 			r := &queryResolver{
 				Resolver: tt.fields.Resolver,
 			}
-			got, err := r.FindPhrases(tt.args.ctx, tt.args.in)
+			got, err := r.FindPhrasesFromText(tt.args.ctx, tt.args.in)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("queryResolver.FindPhrases() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("queryResolver.FindPhrasesFromText() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				gotJson, _ := json.Marshal(got)
 				wantJson, _ := json.Marshal(tt.want)
-				t.Errorf("queryResolver.FindPhrases() = %s,\n want %s", gotJson, wantJson)
+				t.Errorf("queryResolver.FindPhrasesFromText() = %s,\n want %s", gotJson, wantJson)
 			}
 		})
 	}

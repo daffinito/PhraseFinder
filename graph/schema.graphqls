@@ -1,8 +1,14 @@
-type Query {
-  findPhrases(in: String!): [Phrase!]!
-}
+scalar Upload
 
 type Phrase {
   text: String!
   count: Int!
+}
+
+type Query {
+  findPhrasesFromText(text: String!): [Phrase!]
+}
+
+type Mutation {
+  findPhrasesFromFile(file: Upload!): [Phrase!]
 }

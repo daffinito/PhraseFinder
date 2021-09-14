@@ -8,7 +8,6 @@ import (
 	"errors"
 	"strconv"
 	"sync"
-	"sync/atomic"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
@@ -35,6 +34,7 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Mutation() MutationResolver
 	Query() QueryResolver
 }
 
@@ -42,18 +42,25 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	Mutation struct {
+		FindPhrasesFromFile func(childComplexity int, file graphql.Upload) int
+	}
+
 	Phrase struct {
 		Count func(childComplexity int) int
 		Text  func(childComplexity int) int
 	}
 
 	Query struct {
-		FindPhrases func(childComplexity int, in string) int
+		FindPhrasesFromText func(childComplexity int, text string) int
 	}
 }
 
+type MutationResolver interface {
+	FindPhrasesFromFile(ctx context.Context, file graphql.Upload) ([]*model.Phrase, error)
+}
 type QueryResolver interface {
-	FindPhrases(ctx context.Context, in string) ([]*model.Phrase, error)
+	FindPhrasesFromText(ctx context.Context, text string) ([]*model.Phrase, error)
 }
 
 type executableSchema struct {
@@ -71,6 +78,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
+	case "Mutation.findPhrasesFromFile":
+		if e.complexity.Mutation.FindPhrasesFromFile == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_findPhrasesFromFile_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.FindPhrasesFromFile(childComplexity, args["file"].(graphql.Upload)), true
+
 	case "Phrase.count":
 		if e.complexity.Phrase.Count == nil {
 			break
@@ -85,17 +104,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Phrase.Text(childComplexity), true
 
-	case "Query.findPhrases":
-		if e.complexity.Query.FindPhrases == nil {
+	case "Query.findPhrasesFromText":
+		if e.complexity.Query.FindPhrasesFromText == nil {
 			break
 		}
 
-		args, err := ec.field_Query_findPhrases_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_findPhrasesFromText_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.FindPhrases(childComplexity, args["in"].(string)), true
+		return e.complexity.Query.FindPhrasesFromText(childComplexity, args["text"].(string)), true
 
 	}
 	return 0, false
@@ -114,6 +133,20 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 			first = false
 			data := ec._Query(ctx, rc.Operation.SelectionSet)
+			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
+		}
+	case ast.Mutation:
+		return func(ctx context.Context) *graphql.Response {
+			if !first {
+				return nil
+			}
+			first = false
+			data := ec._Mutation(ctx, rc.Operation.SelectionSet)
 			var buf bytes.Buffer
 			data.MarshalGQL(&buf)
 
@@ -147,13 +180,19 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "graph/schema.graphqls", Input: `type Query {
-  findPhrases(in: String!): [Phrase!]!
-}
+	{Name: "graph/schema.graphqls", Input: `scalar Upload
 
 type Phrase {
   text: String!
   count: Int!
+}
+
+type Query {
+  findPhrasesFromText(text: String!): [Phrase!]
+}
+
+type Mutation {
+  findPhrasesFromFile(file: Upload!): [Phrase!]
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -161,6 +200,21 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_Mutation_findPhrasesFromFile_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 graphql.Upload
+	if tmp, ok := rawArgs["file"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("file"))
+		arg0, err = ec.unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["file"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -177,18 +231,18 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_findPhrases_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_findPhrasesFromText_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
-	if tmp, ok := rawArgs["in"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("in"))
+	if tmp, ok := rawArgs["text"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("text"))
 		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["in"] = arg0
+	args["text"] = arg0
 	return args, nil
 }
 
@@ -229,6 +283,45 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Mutation_findPhrasesFromFile(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		Args:       nil,
+		IsMethod:   true,
+		IsResolver: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_findPhrasesFromFile_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().FindPhrasesFromFile(rctx, args["file"].(graphql.Upload))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Phrase)
+	fc.Result = res
+	return ec.marshalOPhrase2ᚕᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhraseᚄ(ctx, field.Selections, res)
+}
 
 func (ec *executionContext) _Phrase_text(ctx context.Context, field graphql.CollectedField, obj *model.Phrase) (ret graphql.Marshaler) {
 	defer func() {
@@ -300,7 +393,7 @@ func (ec *executionContext) _Phrase_count(ctx context.Context, field graphql.Col
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Query_findPhrases(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Query_findPhrasesFromText(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -317,7 +410,7 @@ func (ec *executionContext) _Query_findPhrases(ctx context.Context, field graphq
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Query_findPhrases_args(ctx, rawArgs)
+	args, err := ec.field_Query_findPhrasesFromText_args(ctx, rawArgs)
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
@@ -325,21 +418,18 @@ func (ec *executionContext) _Query_findPhrases(ctx context.Context, field graphq
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().FindPhrases(rctx, args["in"].(string))
+		return ec.resolvers.Query().FindPhrasesFromText(rctx, args["text"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.([]*model.Phrase)
 	fc.Result = res
-	return ec.marshalNPhrase2ᚕᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhraseᚄ(ctx, field.Selections, res)
+	return ec.marshalOPhrase2ᚕᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhraseᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1543,6 +1633,34 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** object.gotpl ****************************
 
+var mutationImplementors = []string{"Mutation"}
+
+func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, mutationImplementors)
+
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Mutation",
+	})
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Mutation")
+		case "findPhrasesFromFile":
+			out.Values[i] = ec._Mutation_findPhrasesFromFile(ctx, field)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var phraseImplementors = []string{"Phrase"}
 
 func (ec *executionContext) _Phrase(ctx context.Context, sel ast.SelectionSet, obj *model.Phrase) graphql.Marshaler {
@@ -1590,7 +1708,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
-		case "findPhrases":
+		case "findPhrasesFromText":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
 				defer func() {
@@ -1598,10 +1716,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_findPhrases(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
+				res = ec._Query_findPhrasesFromText(ctx, field)
 				return res
 			})
 		case "__type":
@@ -1899,50 +2014,6 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) marshalNPhrase2ᚕᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhraseᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Phrase) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNPhrase2ᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhrase(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
 func (ec *executionContext) marshalNPhrase2ᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhrase(ctx context.Context, sel ast.SelectionSet, v *model.Phrase) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -1960,6 +2031,21 @@ func (ec *executionContext) unmarshalNString2string(ctx context.Context, v inter
 
 func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	res := graphql.MarshalString(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, v interface{}) (graphql.Upload, error) {
+	res, err := graphql.UnmarshalUpload(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, sel ast.SelectionSet, v graphql.Upload) graphql.Marshaler {
+	res := graphql.MarshalUpload(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -2247,6 +2333,53 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	return graphql.MarshalBoolean(*v)
+}
+
+func (ec *executionContext) marshalOPhrase2ᚕᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhraseᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Phrase) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPhrase2ᚖgithubᚗcomᚋdaffinitoᚋPhraseFinderᚋgraphᚋmodelᚐPhrase(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

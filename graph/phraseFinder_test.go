@@ -61,7 +61,6 @@ func Test_sanitizeText(t *testing.T) {
 func Test_getPhrases(t *testing.T) {
 	type args struct {
 		text  string
-		limit int
 	}
 	tests := []struct {
 		name string
@@ -72,7 +71,6 @@ func Test_getPhrases(t *testing.T) {
 			name: `Finds all phrases`,
 			args: args{
 				text:  "this is a test this is a test this is a test",
-				limit: 100,
 			},
 			want: map[string]int{
 				"this is a":    3,
@@ -84,36 +82,8 @@ func Test_getPhrases(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getPhrases(tt.args.text, tt.args.limit); !reflect.DeepEqual(got, tt.want) {
+			if got := getPhrases(tt.args.text); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getPhrases() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_getPhrasesLimit(t *testing.T) {
-	type args struct {
-		text  string
-		limit int
-	}
-	tests := []struct {
-		name string
-		args args
-		want int
-	}{
-		{
-			name: `Limits number of phrases`,
-			args: args{
-				text:  "this is a test this is a test this is a test",
-				limit: 2,
-			},
-			want: 2,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := getPhrases(tt.args.text, tt.args.limit); !reflect.DeepEqual(len(got), tt.want) {
-				t.Errorf("getPhrases() = %v, want %v", len(got), tt.want)
 			}
 		})
 	}
@@ -122,6 +92,7 @@ func Test_getPhrasesLimit(t *testing.T) {
 func Test_sortResponse(t *testing.T) {
 	type args struct {
 		phrases []*model.Phrase
+		limit int
 	}
 	tests := []struct {
 		name string
@@ -146,6 +117,7 @@ func Test_sortResponse(t *testing.T) {
 						Count: 3,
 					},
 				},
+				limit: 100,
 			},
 			want: []*model.Phrase{
 				{
@@ -162,11 +134,40 @@ func Test_sortResponse(t *testing.T) {
 					Count: 1,
 				},
 			},
+		}, {
+			name: `Response is limited`,
+			args: args{
+				phrases: []*model.Phrase{
+					{
+						Text:  `test this is`,
+						Count: 1,
+					}, {
+						Text:  `this is a`,
+						Count: 4,
+					}, {
+						Text:  `a test this`,
+						Count: 2,
+					}, {
+						Text:  `is a test`,
+						Count: 3,
+					},
+				},
+				limit: 2,
+			},
+			want: []*model.Phrase{
+				{
+					Text:  `this is a`,
+					Count: 4,
+				}, {
+					Text:  `is a test`,
+					Count: 3,
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := sortResponse(tt.args.phrases); !reflect.DeepEqual(got, tt.want) {
+			if got := sortResponse(tt.args.phrases, tt.args.limit); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("sortResponse() = %v, want %v", got, tt.want)
 			}
 		})
