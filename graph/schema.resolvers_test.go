@@ -88,3 +88,25 @@ func TestResolver_Query(t *testing.T) {
 		})
 	}
 }
+
+func TestResolver_Mutation(t *testing.T) {
+	tests := []struct {
+		name string
+		r    *Resolver
+		want generated.MutationResolver
+	}{
+		{
+			name: `Query returns valid response`,
+			r:    &Resolver{},
+			want: &mutationResolver{&Resolver{}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &Resolver{}
+			if got := r.Mutation(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Resolver.Mutation() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
