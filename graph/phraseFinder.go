@@ -8,6 +8,7 @@ import (
 	"github.com/daffinito/PhraseFinder/graph/model"
 )
 
+// PhraseFinder is the entry point, it takes the raw text provided in the request and returns the completed response
 func PhraseFinder(text string) []*model.Phrase {
 	newText := sanitizeText(text)
 	phraseMap := getPhrases(newText)
@@ -17,6 +18,7 @@ func PhraseFinder(text string) []*model.Phrase {
 	return phrases
 }
 
+// sanitizeText removes all the new lines, punctuation, extra whitespace, and converts the text to lower case
 func sanitizeText(text string) string {
 	replaceWithSpace := " "
 	var replacer = strings.NewReplacer(
@@ -36,6 +38,8 @@ func sanitizeText(text string) string {
 	return strings.ToLower(strings.TrimSpace(newText))
 }
 
+// getPhrases loops through the text and creates a map[string]int with all the 3 word phrases,
+// where the string is the phrase and the int is the number of times the phrase appears
 func getPhrases(text string) map[string]int {
 	phrases := make(map[string]int)
 	var phrase strings.Builder
@@ -62,6 +66,7 @@ func getPhrases(text string) map[string]int {
 	return phrases
 }
 
+// buildResponse marshals the map[string]int to our Phrase struct
 func buildResponse(phrases map[string]int) []*model.Phrase {
 	var response []*model.Phrase
 	for key, val := range phrases {
@@ -74,6 +79,8 @@ func buildResponse(phrases map[string]int) []*model.Phrase {
 	return response
 }
 
+// sortResponse sorts the Phrase struct from most common phrase to least common phrase, and
+// limits the slice size by the limit variable
 func sortResponse(phrases []*model.Phrase, limit int) []*model.Phrase {
 	sort.SliceStable(phrases, func(i, j int) bool {
 		return phrases[i].Count > phrases[j].Count

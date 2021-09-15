@@ -3,9 +3,11 @@ package graph
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"reflect"
 	"testing"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/daffinito/PhraseFinder/graph/generated"
 	"github.com/daffinito/PhraseFinder/graph/model"
 )
@@ -96,7 +98,7 @@ func TestResolver_Mutation(t *testing.T) {
 		want generated.MutationResolver
 	}{
 		{
-			name: `Query returns valid response`,
+			name: `Mutation returns valid response`,
 			r:    &Resolver{},
 			want: &mutationResolver{&Resolver{}},
 		},
@@ -106,6 +108,73 @@ func TestResolver_Mutation(t *testing.T) {
 			r := &Resolver{}
 			if got := r.Mutation(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Resolver.Mutation() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_mutationResolver_FindPhrasesFromFile(t *testing.T) {
+	type fields struct {
+		Resolver *Resolver
+	}
+	type args struct {
+		ctx  context.Context
+		file graphql.Upload
+	}
+
+	ctx := context.Background()
+	f, err := os.Open("../fixtures/testfile")
+	if err != nil {
+		t.Errorf("mutationResolver.FindPhrasesFromFile() - unable to open testfile")
+	}
+	defer f.Close()
+	file := graphql.Upload{
+		File:        f,
+		Filename:    "testfile",
+		Size:        int64(5),
+		ContentType: "text/plain",
+	}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    []*model.Phrase
+		wantErr bool
+	}{
+		{
+			name: `Parses from file are parsed and sorted`,
+			fields: fields{
+				Resolver: &Resolver{},
+			},
+			args: args{
+				ctx:  ctx,
+				file: file,
+			},
+			want: []*model.Phrase{
+				{
+					Text:  `test is test`,
+					Count: 2,
+				}, {
+					Text:  `is test is`,
+					Count: 1,
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &mutationResolver{
+				Resolver: tt.fields.Resolver,
+			}
+			got, err := r.FindPhrasesFromFile(tt.args.ctx, tt.args.file)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("mutationResolver.FindPhrasesFromFile() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("mutationResolver.FindPhrasesFromFile() = %v, want %v", got, tt.want)
 			}
 		})
 	}
