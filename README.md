@@ -12,7 +12,7 @@ go run server.go
 
 Then browse to http://localhost:8080 for the GraphQL Playground.
 
-The playground doesn't support file uploads, so currently to test parsing phrases from a file, use curl:
+The playground doesn't support file uploads, so to test parsing phrases from a file, use curl:
 
 ```
 curl localhost:8080/query \
